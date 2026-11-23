@@ -14,6 +14,7 @@ interface ProductDetailViewProps {
   hasPurchasedProduct: boolean;
   onBack: () => void;
   onAddToCart: (product: Product, variantName: string, unitPriceNgn: number, qty: number) => void;
+  onPayNow: (product: Product, variantName: string, unitPriceNgn: number, qty: number) => void;
   onStartSavings: (product: Product) => void;
   onCheckoutBnpl: (product: Product, variantName: string, unitPriceNgn: number) => void;
   onToggleWishlist: (productId: string) => void;
@@ -28,6 +29,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   hasPurchasedProduct,
   onBack,
   onAddToCart,
+  onPayNow,
   onStartSavings,
   onCheckoutBnpl,
   onToggleWishlist,
@@ -211,74 +213,76 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             </div>
           )}
 
-          {/* Three Separate Purchasing Methods */}
-          <div className="space-y-2.5 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center border border-slate-300 rounded-lg">
+          {/* Clear, compact purchase actions */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-slate-600">Quantity</span>
+              <div className="inline-flex items-center border border-slate-300 rounded-lg overflow-hidden">
                 <button
                   type="button"
+                  aria-label="Decrease quantity"
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   −
                 </button>
-                <span className="px-3 text-sm font-mono font-semibold tabular-nums">{qty}</span>
+                <span className="min-w-8 text-center text-sm font-mono font-semibold tabular-nums">{qty}</span>
                 <button
                   type="button"
+                  aria-label="Increase quantity"
                   onClick={() => setQty((q) => Math.min(Math.max(1, availableStock), q + 1))}
-                  className="px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   +
                 </button>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={availableStock <= 0}
+                onClick={() => onPayNow(product, variant?.name || '', finalPrice, qty)}
+                className="inline-flex items-center justify-center px-3 py-3 bg-blue-700 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Pay Now
+              </button>
               <button
                 type="button"
                 disabled={availableStock <= 0}
                 onClick={() => onAddToCart(product, variant?.name || '', finalPrice, qty)}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-700 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-3 py-3 border border-slate-300 bg-white hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 text-slate-900 text-sm font-semibold rounded-lg transition-colors"
               >
                 <ShoppingCart className="w-4 h-4 shrink-0" />
-                <span>Buy &amp; Pay Now — Add to Cart</span>
+                Add to Cart
               </button>
             </div>
 
-            {product.installmentEligible && availableStock > 0 && (
-              <button
-                type="button"
-                onClick={() => onStartSavings(product)}
-                className="w-full inline-flex items-center justify-between px-4 py-3 border border-slate-300 rounded-lg bg-slate-50 hover:bg-slate-100 text-left transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Wallet className="w-4 h-4 text-blue-700 shrink-0" />
-                  <div>
-                    <div className="text-xs font-bold text-slate-950">Pay Small Small (Save to Buy)</div>
-                    <div className="text-[11px] text-slate-600">
-                      Start from {formatNgn(product.minInstallmentNgn || 5000)} ·{' '}
-                      {(product.allowedDurationsWeeks || [4, 8, 12]).join('/')} week plans
-                    </div>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold text-blue-700">Start Plan →</span>
-              </button>
-            )}
-
-            {product.bnplEligible && availableStock > 0 && (
-              <button
-                type="button"
-                onClick={() => onCheckoutBnpl(product, variant?.name || '', finalPrice)}
-                className="w-full inline-flex items-center justify-between px-4 py-3 border border-slate-300 rounded-lg bg-white hover:bg-slate-50 text-left transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-slate-900 shrink-0" />
-                  <div>
-                    <div className="text-xs font-bold text-slate-950">Buy Now Pay Later · Credibly</div>
-                    <div className="text-[11px] text-slate-600">
-                      Apply for live Credibly financing approval at checkout
-                    </div>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold text-slate-900">Apply →</span>
-              </button>
+            {(product.installmentEligible || product.bnplEligible) && availableStock > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {product.installmentEligible ? (
+                  <button
+                    type="button"
+                    onClick={() => onStartSavings(product)}
+                    className="min-w-0 flex flex-col items-center justify-center gap-1 px-2.5 py-3 border border-blue-200 rounded-lg bg-blue-50/70 hover:bg-blue-50 text-center transition-colors"
+                  >
+                    <Wallet className="w-4 h-4 text-blue-700" />
+                    <span className="text-xs font-bold text-slate-950">Pay Small Small</span>
+                    <span className="text-[10px] text-slate-600 leading-tight">From {formatNgn(product.minInstallmentNgn || 5000)}</span>
+                  </button>
+                ) : <div />}
+                {product.bnplEligible ? (
+                  <button
+                    type="button"
+                    onClick={() => onCheckoutBnpl(product, variant?.name || '', finalPrice)}
+                    className="min-w-0 flex flex-col items-center justify-center gap-1 px-2.5 py-3 border border-slate-300 rounded-lg bg-white hover:bg-slate-50 text-center transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-slate-800" />
+                    <span className="text-xs font-bold text-slate-950">Buy Now Pay Later</span>
+                    <span className="text-[10px] text-slate-600 leading-tight">Credibly financing</span>
+                  </button>
+                ) : <div />}
+              </div>
             )}
           </div>
 
