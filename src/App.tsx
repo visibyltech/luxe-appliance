@@ -175,6 +175,43 @@ export default function App() {
     }
   }, [cart]);
 
+  // Keep browser Back navigation inside the storefront instead of leaving the site.
+  const navigationReadyRef = useRef(false);
+
+  useEffect(() => {
+    const currentState = window.history.state;
+    if (!currentState || typeof currentState !== 'object' || !currentState.luxeView) {
+      window.history.replaceState(
+        { ...(currentState || {}), luxeView: 'home' },
+        '',
+        window.location.href
+      );
+    }
+    navigationReadyRef.current = true;
+
+    const validViews: AppView[] = ['home', 'shop', 'product', 'checkout', 'account', 'admin'];
+    const handlePopState = (event: PopStateEvent) => {
+      const previousView = event.state?.luxeView as AppView | undefined;
+      setView(previousView && validViews.includes(previousView) ? previousView : 'home');
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!navigationReadyRef.current) return;
+    const currentState = window.history.state;
+    if (currentState?.luxeView !== view) {
+      window.history.pushState(
+        { ...(currentState && typeof currentState === 'object' ? currentState : {}), luxeView: view },
+        '',
+        window.location.href
+      );
+    }
+  }, [view]);
+
   // Keep in-app navigation in the browser history so Android/browser Back
   // returns to the previous Luxe Appliances screen instead of leaving the site.
   const navigationReadyRef = useRef(false);
