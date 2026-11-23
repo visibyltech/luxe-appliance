@@ -141,18 +141,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/40" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-20">
-          <div className="max-w-2xl space-y-4 sm:space-y-5">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-7 sm:py-10 lg:py-14">
+          <div className="max-w-2xl space-y-3 sm:space-y-4">
             <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-widest text-blue-300">
               Official Electronics &amp; Appliances · {HERO_SLIDES[slideIdx].caption}
             </p>
             <h1
-              className="font-display text-3xl sm:text-5xl font-bold tracking-tight text-white leading-[1.12]"
+              className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-white leading-[1.1]"
               style={{ textWrap: 'balance' }}
             >
               Shop Smart. Live Better.
             </h1>
-            <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-xl">
+            <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-xl">
               Authentic televisions, inverter refrigerators, freezers, washing machines, air
               conditioners, kitchen appliances, smartphones, laptops, and solar power stations
               across Nigeria.
@@ -162,7 +162,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <button
                 type="button"
                 onClick={() => onShopAll()}
-                className="inline-flex items-center gap-2 px-5 sm:px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-md"
+                className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap shadow-md"
               >
                 <span>Shop All Products</span>
                 <ArrowRight className="w-4 h-4" />
@@ -170,13 +170,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <button
                 type="button"
                 onClick={() => onShopAll({ tab: 'specialOffer' })}
-                className="inline-flex items-center px-5 py-3 border border-white/30 hover:border-white/60 bg-slate-950/60 backdrop-blur-xs text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
+                className="inline-flex items-center px-4 sm:px-5 py-2.5 sm:py-3 border border-white/30 hover:border-white/60 bg-slate-950/60 backdrop-blur-xs text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
               >
                 View Special Offers
               </button>
             </div>
 
-            <div className="flex items-center gap-3 pt-3">
+            <div className="flex items-center gap-2.5 pt-1 sm:pt-2">
               <button
                 type="button"
                 aria-label="Previous slide"
@@ -215,39 +215,39 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Three Payment Options & Nationwide Delivery Strip */}
       <section className="border-b border-slate-200 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
           <div className="flex items-start gap-3 min-w-0">
-            <CreditCard className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <h2 className="font-display text-sm font-semibold text-white">Buy &amp; Pay Now</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">Buy &amp; Pay Now</h2>
+              <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 leading-snug">
                 Instant Paystack checkout &amp; verified bank transfers with receipts.
               </p>
             </div>
           </div>
           <div className="flex items-start gap-3 min-w-0">
-            <Wallet className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+            <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <h2 className="font-display text-sm font-semibold text-white">Pay Small Small</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">Pay Small Small</h2>
+              <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 leading-snug">
                 Start saving from ₦5,000 minimum deposit across flexible plans.
               </p>
             </div>
           </div>
           <div className="flex items-start gap-3 min-w-0">
-            <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <h2 className="font-display text-sm font-semibold text-white">Credibly BNPL</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">Credibly BNPL</h2>
+              <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 leading-snug">
                 Buy Now Pay Later financing with official Credibly underwriting.
               </p>
             </div>
           </div>
           <div className="flex items-start gap-3 min-w-0">
-            <Truck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+            <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <h2 className="font-display text-sm font-semibold text-white">36 States + FCT</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">36 States + FCT</h2>
+              <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 leading-snug">
                 1–2 day Lagos dispatch and insured nationwide delivery.
               </p>
             </div>
