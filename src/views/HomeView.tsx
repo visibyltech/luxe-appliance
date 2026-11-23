@@ -215,8 +215,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Three Payment Options & Nationwide Delivery Strip */}
       <section className="border-b border-slate-200 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-          <div className="flex items-start gap-3 min-w-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-4 grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+          <div className="flex flex-col items-center text-center gap-1.5 min-w-0 rounded-lg bg-slate-800/60 px-1.5 py-2 sm:p-3 sm:flex-row sm:items-start sm:text-left sm:gap-2">
             <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
               <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">Buy &amp; Pay Now</h2>
@@ -225,7 +225,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3 min-w-0">
+          <div className="flex flex-col items-center text-center gap-1.5 min-w-0 rounded-lg bg-slate-800/60 px-1.5 py-2 sm:p-3 sm:flex-row sm:items-start sm:text-left sm:gap-2">
             <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
               <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">Pay Small Small</h2>
@@ -234,7 +234,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3 min-w-0">
+          <div className="flex flex-col items-center text-center gap-1.5 min-w-0 rounded-lg bg-slate-800/60 px-1.5 py-2 sm:p-3 sm:flex-row sm:items-start sm:text-left sm:gap-2">
             <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
               <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">Credibly BNPL</h2>
@@ -243,7 +243,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3 min-w-0">
+          <div className="col-span-3 lg:col-span-1 flex flex-row items-center justify-center text-left gap-2 min-w-0 rounded-lg bg-slate-800/60 px-3 py-2 sm:p-3">
             <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
               <h2 className="font-display text-xs sm:text-sm font-semibold text-white leading-tight">36 States + FCT</h2>
