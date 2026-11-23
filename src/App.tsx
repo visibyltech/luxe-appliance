@@ -110,6 +110,63 @@ export default function App() {
   const [seeding, setSeeding] = useState(false);
   const autoSeededRef = useRef(false);
 
+  // Keep in-app views in browser history so Android/browser Back returns to
+  // the previous storefront screen instead of leaving the site.
+  const handlingPopStateRef = useRef(false);
+  const currentViewRef = useRef<AppView>(view);
+
+  useEffect(() => {
+    const state = window.history.state as
+      | { luxeApplianceApp?: boolean; luxeApplianceView?: AppView }
+      | null;
+
+    if (!state?.luxeApplianceApp) {
+      window.history.replaceState(
+        { ...(state || {}), luxeApplianceApp: true, luxeApplianceView: view },
+        '',
+        window.location.href
+      );
+    } else if (handlingPopStateRef.current) {
+      handlingPopStateRef.current = false;
+    } else if (state.luxeApplianceView !== view) {
+      window.history.pushState(
+        { ...(state || {}), luxeApplianceApp: true, luxeApplianceView: view },
+        '',
+        window.location.href
+      );
+    }
+
+    currentViewRef.current = view;
+  }, [view]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as
+        | { luxeApplianceApp?: boolean; luxeApplianceView?: AppView }
+        | null;
+
+      if (state?.luxeApplianceApp && state.luxeApplianceView) {
+        handlingPopStateRef.current = true;
+        setView(state.luxeApplianceView);
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      } else if (currentViewRef.current !== 'home') {
+        // Keep the user inside the storefront if the browser provides an
+        // external history entry while an internal page is open.
+        window.history.pushState(
+          {
+            luxeApplianceApp: true,
+            luxeApplianceView: currentViewRef.current,
+          },
+          '',
+          window.location.href
+        );
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('luxe_cart_v1', JSON.stringify(cart));
@@ -432,6 +489,15 @@ export default function App() {
     };
   }, [authReady, user, isAdmin]);
 
+  const goBack = () => {
+    const state = window.history.state as { luxeApplianceApp?: boolean } | null;
+    if (state?.luxeApplianceApp && window.history.length > 1) {
+      window.history.back();
+    } else {
+      setView('shop');
+    }
+  };
+
   const addToCart = (
     product: Product,
     variantName = '',
@@ -622,7 +688,7 @@ export default function App() {
             hasPurchasedProduct={orders.some((o) =>
               o.items.some((i) => i.productId === selectedProduct.id)
             )}
-            onBack={() => setView('shop')}
+            onBack={goBack}
             onAddToCart={addToCart}
             onStartSavings={handleStartSavings}
             onCheckoutBnpl={handleCheckoutBnpl}
@@ -640,7 +706,7 @@ export default function App() {
             shippingZones={shippingZones}
             settings={storeSettings}
             initialMethod={checkoutInitMethod}
-            onBack={() => setView('shop')}
+            onBack={goBack}
             onRequireAuth={() => setAuthModalOpen(true)}
             onOrderComplete={() => setCart([])}
             onStartSavingsForProduct={(prod) => setSavingsModalProduct(prod)}
