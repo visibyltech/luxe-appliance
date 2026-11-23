@@ -432,8 +432,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Featured products">
           {tabProducts.map((product) => (
+            <div key={product.id} className="w-[72vw] max-w-[230px] min-w-[165px] sm:w-[245px] sm:min-w-[245px] shrink-0 snap-start">
             <ProductCard
               key={product.id}
               product={product}
@@ -444,10 +445,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
               onToggleWishlist={onToggleWishlist}
               onStartSavings={onStartSavings}
             />
+            </div>
           ))}
         </div>
 
-        <div className="mt-8 text-center">
+        <div className="mt-5 text-center">
           <button
             type="button"
             onClick={() => onShopAll()}
