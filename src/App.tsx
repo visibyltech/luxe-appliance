@@ -652,6 +652,13 @@ export default function App() {
             )}
             onBack={goBack}
             onAddToCart={addToCart}
+            onPayNow={(product, variantName, unitPriceNgn, qty) => {
+              addToCart(product, variantName, unitPriceNgn, qty, false);
+              setCartOpen(false);
+              setCheckoutInitMethod('buy_now');
+              setView('checkout');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             onStartSavings={handleStartSavings}
             onCheckoutBnpl={handleCheckoutBnpl}
             onToggleWishlist={handleToggleWishlist}
