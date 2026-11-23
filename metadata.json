@@ -1,0 +1,6 @@
+{
+  "name": "Luxe Appliances",
+  "description": "Shop Smart. Live Better. Nigeria's premier electronics and home appliances marketplace featuring Buy & Pay Now, Pay Small Small installment savings, and Credibly Buy Now Pay Later.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

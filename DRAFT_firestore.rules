@@ -1,0 +1,599 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 4.1: Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Phase 3: Global Hardened Primitives
+    // -------------------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isVerified() && request.auth.uid == uid;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerified() && request.auth.token.email == 'usitakatelvin@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+        (isVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isNonEmptyString(val, maxLen) {
+      return val is string && val.size() >= 1 && val.size() <= maxLen;
+    }
+
+    function isOptionalString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    // -------------------------------------------------------------------------
+    // Validation Blueprints (Pillar 2: Anti-Update-Gap)
+    // -------------------------------------------------------------------------
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'grantedBy', 'createdAt']) &&
+        isValidId(data.uid) &&
+        isNonEmptyString(data.email, 200) &&
+        (!('displayName' in data) || isOptionalString(data.displayName, 120)) &&
+        (!('grantedBy' in data) || isOptionalString(data.grantedBy, 128)) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'phone',
+          'defaultState', 'defaultCity', 'defaultAddress',
+          'savedAddresses', 'wishlist', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.uid == request.auth.uid &&
+        isNonEmptyString(data.email, 200) &&
+        isNonEmptyString(data.displayName, 120) &&
+        (!('phone' in data) || isOptionalString(data.phone, 32)) &&
+        (!('defaultState' in data) || isOptionalString(data.defaultState, 64)) &&
+        (!('defaultCity' in data) || isOptionalString(data.defaultCity, 80)) &&
+        (!('defaultAddress' in data) || isOptionalString(data.defaultAddress, 300)) &&
+        (!('savedAddresses' in data) || (data.savedAddresses is list && data.savedAddresses.size() <= 5)) &&
+        (!('wishlist' in data) || (data.wishlist is list && data.wishlist.size() <= 50 && (data.wishlist.size() == 0 || data.wishlist[0] is string))) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+          'id', 'name', 'brand', 'category', 'priceNgn', 'stock',
+          'images', 'installmentEligible', 'bnplEligible', 'active', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'name', 'slug', 'brand', 'category', 'subcategory', 'description',
+          'priceNgn', 'discountPercent', 'stock', 'lowStockThreshold', 'images',
+          'specs', 'variants', 'featured', 'bestSeller', 'newArrival', 'specialOffer',
+          'installmentEligible', 'bnplEligible', 'minInstallmentNgn', 'allowedDurationsWeeks',
+          'ratingAvg', 'reviewCount', 'active', 'approvalStatus', 'needsConfirmation',
+          'confirmationNote', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 180 &&
+        (!('slug' in data) || isOptionalString(data.slug, 200)) &&
+        isNonEmptyString(data.brand, 80) &&
+        isNonEmptyString(data.category, 80) &&
+        (!('subcategory' in data) || isOptionalString(data.subcategory, 80)) &&
+        (!('description' in data) || isOptionalString(data.description, 4000)) &&
+        data.priceNgn is number && data.priceNgn >= 0 &&
+        (!('discountPercent' in data) || (data.discountPercent is number && data.discountPercent >= 0 && data.discountPercent <= 90)) &&
+        data.stock is number && data.stock >= 0 &&
+        (!('lowStockThreshold' in data) || (data.lowStockThreshold is number && data.lowStockThreshold >= 0)) &&
+        data.images is list && data.images.size() >= 1 && data.images.size() <= 8 && data.images[0] is string &&
+        (!('specs' in data) || (data.specs is list && data.specs.size() <= 25)) &&
+        (!('variants' in data) || (data.variants is list && data.variants.size() <= 12)) &&
+        (!('featured' in data) || data.featured is bool) &&
+        (!('bestSeller' in data) || data.bestSeller is bool) &&
+        (!('newArrival' in data) || data.newArrival is bool) &&
+        (!('specialOffer' in data) || data.specialOffer is bool) &&
+        data.installmentEligible is bool &&
+        data.bnplEligible is bool &&
+        (!('minInstallmentNgn' in data) || (data.minInstallmentNgn is number && data.minInstallmentNgn >= 5000)) &&
+        (!('allowedDurationsWeeks' in data) || (data.allowedDurationsWeeks is list && data.allowedDurationsWeeks.size() <= 8)) &&
+        (!('ratingAvg' in data) || (data.ratingAvg is number && data.ratingAvg >= 0 && data.ratingAvg <= 5)) &&
+        (!('reviewCount' in data) || (data.reviewCount is number && data.reviewCount >= 0)) &&
+        data.active is bool &&
+        (!('approvalStatus' in data) || data.approvalStatus in ['Pending Admin Approval', 'Published', 'Unpublished']) &&
+        (!('needsConfirmation' in data) || data.needsConfirmation is bool) &&
+        (!('confirmationNote' in data) || isOptionalString(data.confirmationNote, 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['id', 'name', 'slug', 'subcategories', 'sortOrder', 'active']) &&
+        data.keys().hasOnly(['id', 'name', 'slug', 'subcategories', 'sortOrder', 'active']) &&
+        isValidId(data.id) &&
+        isNonEmptyString(data.name, 80) &&
+        isNonEmptyString(data.slug, 100) &&
+        data.subcategories is list && data.subcategories.size() <= 20 &&
+        (data.subcategories.size() == 0 || data.subcategories[0] is string) &&
+        data.sortOrder is number &&
+        data.active is bool;
+    }
+
+    function isValidBrand(data) {
+      return data.keys().hasAll(['id', 'name', 'slug', 'featured', 'active']) &&
+        data.keys().hasOnly(['id', 'name', 'slug', 'featured', 'active']) &&
+        isValidId(data.id) &&
+        isNonEmptyString(data.name, 80) &&
+        isNonEmptyString(data.slug, 100) &&
+        data.featured is bool &&
+        data.active is bool;
+    }
+
+    function isValidCoupon(data) {
+      return data.keys().hasAll(['code', 'discountType', 'discountValue', 'minOrderNgn', 'active', 'createdAt']) &&
+        data.keys().hasOnly([
+          'code', 'discountType', 'discountValue', 'minOrderNgn',
+          'applicableProductIds', 'maxUses', 'usedCount', 'expiresAt', 'active', 'createdAt'
+        ]) &&
+        data.code is string && data.code.size() >= 3 && data.code.size() <= 32 && data.code.matches('^[A-Z0-9_\\-]+$') &&
+        data.discountType in ['percent', 'fixed'] &&
+        data.discountValue is number && data.discountValue > 0 &&
+        data.minOrderNgn is number && data.minOrderNgn >= 0 &&
+        (!('applicableProductIds' in data) || (data.applicableProductIds is list && data.applicableProductIds.size() <= 50)) &&
+        (!('maxUses' in data) || (data.maxUses is number && data.maxUses >= 0)) &&
+        (!('usedCount' in data) || (data.usedCount is number && data.usedCount >= 0)) &&
+        (!('expiresAt' in data) || isOptionalString(data.expiresAt, 64)) &&
+        data.active is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidShippingZone(data) {
+      return data.keys().hasAll(['state', 'region', 'feeNgn', 'estimatedDays', 'active']) &&
+        data.keys().hasOnly(['state', 'region', 'feeNgn', 'estimatedDays', 'freeShippingThresholdNgn', 'active']) &&
+        isNonEmptyString(data.state, 64) &&
+        isNonEmptyString(data.region, 64) &&
+        data.feeNgn is number && data.feeNgn >= 0 &&
+        isNonEmptyString(data.estimatedDays, 64) &&
+        (!('freeShippingThresholdNgn' in data) || (data.freeShippingThresholdNgn is number && data.freeShippingThresholdNgn >= 0)) &&
+        data.active is bool;
+    }
+
+    function isValidStoreSettings(data) {
+      return data.keys().hasAll([
+          'minInstallmentNgn', 'defaultInstallmentDurationsWeeks',
+          'paySmallSmallEnabled', 'bnplEnabled', 'paystackEnabled', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'minInstallmentNgn', 'defaultInstallmentDurationsWeeks',
+          'paySmallSmallEnabled', 'bnplEnabled', 'paystackEnabled', 'bankTransferEnabled',
+          'bankName', 'bankAccountNumber', 'bankAccountName',
+          'freeDeliveryThresholdNgn', 'supportPhone', 'supportEmail', 'supportWhatsapp', 'updatedAt'
+        ]) &&
+        data.minInstallmentNgn is number && data.minInstallmentNgn >= 1000 &&
+        data.defaultInstallmentDurationsWeeks is list && data.defaultInstallmentDurationsWeeks.size() >= 1 && data.defaultInstallmentDurationsWeeks.size() <= 8 &&
+        data.paySmallSmallEnabled is bool &&
+        data.bnplEnabled is bool &&
+        data.paystackEnabled is bool &&
+        (!('bankTransferEnabled' in data) || data.bankTransferEnabled is bool) &&
+        (!('bankName' in data) || isOptionalString(data.bankName, 120)) &&
+        (!('bankAccountNumber' in data) || isOptionalString(data.bankAccountNumber, 20)) &&
+        (!('bankAccountName' in data) || isOptionalString(data.bankAccountName, 120)) &&
+        (!('freeDeliveryThresholdNgn' in data) || (data.freeDeliveryThresholdNgn is number && data.freeDeliveryThresholdNgn >= 0)) &&
+        (!('supportPhone' in data) || isOptionalString(data.supportPhone, 32)) &&
+        (!('supportEmail' in data) || isOptionalString(data.supportEmail, 160)) &&
+        (!('supportWhatsapp' in data) || isOptionalString(data.supportWhatsapp, 32)) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+          'orderNumber', 'userId', 'customerName', 'customerEmail', 'customerPhone',
+          'paymentMethod', 'paymentStatus', 'orderStatus', 'items',
+          'subtotalNgn', 'discountNgn', 'shippingFeeNgn', 'totalNgn',
+          'shippingState', 'shippingCity', 'shippingAddress', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'orderNumber', 'userId', 'customerName', 'customerEmail', 'customerPhone',
+          'paymentMethod', 'paymentStatus', 'orderStatus', 'items',
+          'subtotalNgn', 'discountNgn', 'couponCode', 'shippingFeeNgn', 'totalNgn',
+          'shippingState', 'shippingCity', 'shippingAddress', 'estimatedDelivery',
+          'paymentReference', 'receiptNumber', 'trackingHistory', 'createdAt', 'updatedAt'
+        ]) &&
+        isNonEmptyString(data.orderNumber, 40) &&
+        isValidId(data.userId) &&
+        isNonEmptyString(data.customerName, 120) &&
+        isNonEmptyString(data.customerEmail, 200) &&
+        isNonEmptyString(data.customerPhone, 32) &&
+        data.paymentMethod in ['buy_now', 'bank_transfer', 'pay_small_small', 'credibly_bnpl'] &&
+        data.paymentStatus in ['pending', 'verified', 'partial', 'paid', 'failed'] &&
+        data.orderStatus in ['Order Received', 'Payment Confirmed', 'Processing', 'Dispatched', 'Out for Delivery', 'Delivered', 'Cancelled'] &&
+        data.items is list && data.items.size() >= 1 && data.items.size() <= 30 &&
+        data.subtotalNgn is number && data.subtotalNgn >= 0 &&
+        data.discountNgn is number && data.discountNgn >= 0 &&
+        (!('couponCode' in data) || isOptionalString(data.couponCode, 32)) &&
+        data.shippingFeeNgn is number && data.shippingFeeNgn >= 0 &&
+        data.totalNgn is number && data.totalNgn >= 0 &&
+        isNonEmptyString(data.shippingState, 64) &&
+        isNonEmptyString(data.shippingCity, 80) &&
+        isNonEmptyString(data.shippingAddress, 300) &&
+        (!('estimatedDelivery' in data) || isOptionalString(data.estimatedDelivery, 80)) &&
+        (!('paymentReference' in data) || isOptionalString(data.paymentReference, 128)) &&
+        (!('receiptNumber' in data) || isOptionalString(data.receiptNumber, 64)) &&
+        (!('trackingHistory' in data) || (data.trackingHistory is list && data.trackingHistory.size() <= 15)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSavingsPlan(data) {
+      return data.keys().hasAll([
+          'planNumber', 'userId', 'customerEmail', 'customerName', 'customerPhone',
+          'productId', 'productName', 'totalPriceNgn', 'amountPaidNgn', 'outstandingNgn',
+          'minInstallmentNgn', 'durationWeeks', 'status', 'releaseApproved',
+          'shippingState', 'shippingCity', 'shippingAddress', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'planNumber', 'userId', 'customerEmail', 'customerName', 'customerPhone',
+          'productId', 'productName', 'productImage', 'variantName',
+          'totalPriceNgn', 'amountPaidNgn', 'outstandingNgn', 'minInstallmentNgn',
+          'durationWeeks', 'installmentFrequency', 'status', 'releaseApproved',
+          'shippingState', 'shippingCity', 'shippingAddress', 'shippingFeeNgn',
+          'nextReminderAt', 'paymentHistory', 'createdAt', 'updatedAt'
+        ]) &&
+        isNonEmptyString(data.planNumber, 40) &&
+        isValidId(data.userId) &&
+        isNonEmptyString(data.customerEmail, 200) &&
+        isNonEmptyString(data.customerName, 120) &&
+        isNonEmptyString(data.customerPhone, 32) &&
+        isValidId(data.productId) &&
+        isNonEmptyString(data.productName, 180) &&
+        (!('productImage' in data) || isOptionalString(data.productImage, 600)) &&
+        (!('variantName' in data) || isOptionalString(data.variantName, 100)) &&
+        data.totalPriceNgn is number && data.totalPriceNgn > 0 &&
+        data.amountPaidNgn is number && data.amountPaidNgn >= 0 && data.amountPaidNgn <= data.totalPriceNgn &&
+        data.outstandingNgn is number && data.outstandingNgn >= 0 &&
+        data.minInstallmentNgn is number && data.minInstallmentNgn >= 5000 &&
+        data.durationWeeks is number && data.durationWeeks >= 1 && data.durationWeeks <= 104 &&
+        (!('installmentFrequency' in data) || data.installmentFrequency in ['weekly', 'biweekly', 'monthly', 'flexible']) &&
+        data.status in ['active', 'completed', 'released', 'cancelled'] &&
+        data.releaseApproved is bool &&
+        isNonEmptyString(data.shippingState, 64) &&
+        isNonEmptyString(data.shippingCity, 80) &&
+        isNonEmptyString(data.shippingAddress, 300) &&
+        (!('shippingFeeNgn' in data) || (data.shippingFeeNgn is number && data.shippingFeeNgn >= 0)) &&
+        (!('nextReminderAt' in data) || isOptionalString(data.nextReminderAt, 64)) &&
+        (!('paymentHistory' in data) || (data.paymentHistory is list && data.paymentHistory.size() <= 100)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPaymentRecord(data) {
+      return data.keys().hasAll([
+          'reference', 'userId', 'paymentMethod', 'amountNgn',
+          'currency', 'status', 'gateway', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'reference', 'userId', 'orderId', 'savingsPlanId', 'paymentMethod',
+          'amountNgn', 'currency', 'status', 'gateway', 'gatewayResponse',
+          'verificationProof', 'createdAt'
+        ]) &&
+        isValidId(data.reference) &&
+        isValidId(data.userId) &&
+        (!('orderId' in data) || isOptionalString(data.orderId, 128)) &&
+        (!('savingsPlanId' in data) || isOptionalString(data.savingsPlanId, 128)) &&
+        isNonEmptyString(data.paymentMethod, 40) &&
+        data.amountNgn is number && data.amountNgn > 0 &&
+        data.currency == 'NGN' &&
+        data.status in ['pending', 'verified', 'failed'] &&
+        data.gateway in ['paystack', 'bank_transfer', 'credibly'] &&
+        (!('gatewayResponse' in data) || isOptionalString(data.gatewayResponse, 300)) &&
+        (!('verificationProof' in data) || isOptionalString(data.verificationProof, 256)) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidBnplApplication(data) {
+      return data.keys().hasAll([
+          'applicationNumber', 'userId', 'customerName', 'customerEmail', 'customerPhone',
+          'totalNgn', 'tenureMonths', 'status', 'isLiveCredibly', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'applicationNumber', 'crediblyReference', 'userId', 'customerName', 'customerEmail',
+          'customerPhone', 'bvnLast4', 'monthlyIncomeNgn', 'employmentStatus', 'orderId',
+          'items', 'totalNgn', 'tenureMonths', 'status', 'providerMessage',
+          'isLiveCredibly', 'createdAt', 'updatedAt'
+        ]) &&
+        isNonEmptyString(data.applicationNumber, 40) &&
+        (!('crediblyReference' in data) || isOptionalString(data.crediblyReference, 128)) &&
+        isValidId(data.userId) &&
+        isNonEmptyString(data.customerName, 120) &&
+        isNonEmptyString(data.customerEmail, 200) &&
+        isNonEmptyString(data.customerPhone, 32) &&
+        (!('bvnLast4' in data) || isOptionalString(data.bvnLast4, 4)) &&
+        (!('monthlyIncomeNgn' in data) || (data.monthlyIncomeNgn is number && data.monthlyIncomeNgn >= 0)) &&
+        (!('employmentStatus' in data) || isOptionalString(data.employmentStatus, 64)) &&
+        (!('orderId' in data) || isOptionalString(data.orderId, 128)) &&
+        (!('items' in data) || (data.items is list && data.items.size() <= 30)) &&
+        data.totalNgn is number && data.totalNgn > 0 &&
+        data.tenureMonths is number && data.tenureMonths >= 1 && data.tenureMonths <= 24 &&
+        data.status in ['awaiting_credentials', 'submitted', 'under_review', 'approved', 'declined', 'completed'] &&
+        (!('providerMessage' in data) || isOptionalString(data.providerMessage, 500)) &&
+        data.isLiveCredibly is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['productId', 'userId', 'userName', 'rating', 'title', 'comment', 'approved', 'createdAt']) &&
+        data.keys().hasOnly(['productId', 'userId', 'userName', 'rating', 'title', 'comment', 'verifiedPurchase', 'approved', 'createdAt']) &&
+        isValidId(data.productId) &&
+        isValidId(data.userId) &&
+        isNonEmptyString(data.userName, 120) &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        isNonEmptyString(data.title, 140) &&
+        data.comment is string && data.comment.size() >= 5 && data.comment.size() <= 1500 &&
+        (!('verifiedPurchase' in data) || data.verifiedPurchase is bool) &&
+        data.approved is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'type', 'title', 'message', 'channel', 'deliveryStatus', 'read', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'type', 'title', 'message', 'channel', 'deliveryStatus', 'relatedId', 'read', 'createdAt']) &&
+        isValidId(data.userId) &&
+        data.type in ['payment', 'order', 'savings', 'bnpl', 'low_stock', 'admin_alert'] &&
+        isNonEmptyString(data.title, 160) &&
+        isNonEmptyString(data.message, 800) &&
+        data.channel in ['in_app', 'email', 'whatsapp', 'sms'] &&
+        data.deliveryStatus in ['sent', 'queued', 'provider_unconfigured'] &&
+        (!('relatedId' in data) || isOptionalString(data.relatedId, 128)) &&
+        data.read is bool &&
+        data.createdAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Match Blocks (Exhaustive Coverage of Blueprint)
+    // -------------------------------------------------------------------------
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if isValidId(uid) && isAdmin() && (request.method == 'delete' || isValidAdminUser(incoming()));
+    }
+
+    match /users/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(uid) && isOwner(uid) && isValidUserProfile(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(uid) && isValidUserProfile(incoming()) && (
+        isAdmin() ||
+        (
+          isOwner(uid) &&
+          incoming().uid == existing().uid &&
+          incoming().email == existing().email &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName', 'phone', 'defaultState', 'defaultCity',
+            'defaultAddress', 'savedAddresses', 'wishlist', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isValidId(uid) && isAdmin();
+    }
+
+    match /products/{productId} {
+      allow get: if isValidId(productId) && (existing().active == true || isAdmin());
+      allow list: if existing().active == true || isAdmin();
+      allow create: if isValidId(productId) && isAdmin() && isValidProduct(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(productId) && isAdmin() && isValidProduct(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(productId) && isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow get: if isValidId(categoryId);
+      allow list: if true;
+      allow create, update: if isValidId(categoryId) && isAdmin() && isValidCategory(incoming());
+      allow delete: if isValidId(categoryId) && isAdmin();
+    }
+
+    match /brands/{brandId} {
+      allow get: if isValidId(brandId);
+      allow list: if true;
+      allow create, update: if isValidId(brandId) && isAdmin() && isValidBrand(incoming());
+      allow delete: if isValidId(brandId) && isAdmin();
+    }
+
+    match /coupons/{couponCode} {
+      allow get: if isValidId(couponCode) && isVerified();
+      allow list: if isAdmin();
+      allow create: if isValidId(couponCode) && isAdmin() && isValidCoupon(incoming()) &&
+        incoming().code == couponCode && incoming().createdAt == request.time;
+      allow update: if isValidId(couponCode) && isAdmin() && isValidCoupon(incoming()) &&
+        incoming().code == existing().code && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(couponCode) && isAdmin();
+    }
+
+    match /shipping_zones/{zoneId} {
+      allow get: if isValidId(zoneId);
+      allow list: if true;
+      allow create, update: if isValidId(zoneId) && isAdmin() && isValidShippingZone(incoming());
+      allow delete: if isValidId(zoneId) && isAdmin();
+    }
+
+    match /store_settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true;
+      allow create, update: if isValidId(settingId) && isAdmin() && isValidStoreSettings(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(settingId) && isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(orderId) && isVerified() && isValidOrder(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            incoming().paymentMethod == 'bank_transfer' &&
+            incoming().paymentStatus == 'pending' &&
+            incoming().orderStatus == 'Order Received'
+          ) ||
+          (
+            incoming().paymentMethod == 'buy_now' &&
+            incoming().paymentStatus == 'verified' &&
+            incoming().orderStatus == 'Payment Confirmed' &&
+            isValidId(incoming().paymentReference) &&
+            existsAfter(/databases/$(database)/documents/payments/$(incoming().paymentReference)) &&
+            getAfter(/databases/$(database)/documents/payments/$(incoming().paymentReference)).data.userId == request.auth.uid
+          ) ||
+          (
+            incoming().paymentMethod == 'credibly_bnpl' &&
+            incoming().paymentStatus == 'pending' &&
+            incoming().orderStatus == 'Order Received'
+          )
+        );
+      allow update: if isValidId(orderId) && isVerified() && isValidOrder(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().orderStatus == 'Order Received' &&
+            incoming().orderStatus == 'Cancelled' &&
+            incoming().paymentStatus == existing().paymentStatus &&
+            incoming().totalNgn == existing().totalNgn &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['orderStatus', 'trackingHistory', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    match /savings_plans/{planId} {
+      allow get: if isValidId(planId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(planId) && isVerified() && isValidSavingsPlan(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        exists(/databases/$(database)/documents/products/$(incoming().productId)) &&
+        incoming().releaseApproved == false &&
+        incoming().status == 'active' &&
+        incoming().amountPaidNgn >= incoming().minInstallmentNgn &&
+        incoming().outstandingNgn == (incoming().totalPriceNgn - incoming().amountPaidNgn) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(planId) && isVerified() && isValidSavingsPlan(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().productId == existing().productId &&
+        incoming().totalPriceNgn == existing().totalPriceNgn &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().status == 'active' &&
+            incoming().releaseApproved == existing().releaseApproved &&
+            incoming().amountPaidNgn > existing().amountPaidNgn &&
+            incoming().outstandingNgn == (existing().totalPriceNgn - incoming().amountPaidNgn) &&
+            incoming().status in ['active', 'completed'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'amountPaidNgn', 'outstandingNgn', 'status', 'paymentHistory', 'nextReminderAt', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(planId) && isAdmin();
+    }
+
+    match /payments/{paymentRef} {
+      allow get: if isValidId(paymentRef) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(paymentRef) && isVerified() && isValidPaymentRecord(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().reference == paymentRef &&
+        incoming().createdAt == request.time && (
+          isAdmin() ||
+          (incoming().gateway == 'bank_transfer' && incoming().status == 'pending') ||
+          (incoming().gateway == 'paystack' && incoming().status == 'verified' && isNonEmptyString(incoming().verificationProof, 256))
+        );
+      allow update, delete: if isValidId(paymentRef) && isAdmin() && (request.method == 'delete' || isValidPaymentRecord(incoming()));
+    }
+
+    match /bnpl_applications/{applicationId} {
+      allow get: if isValidId(applicationId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(applicationId) && isVerified() && isValidBnplApplication(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status in ['awaiting_credentials', 'submitted', 'under_review'] &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(applicationId) && isVerified() && isValidBnplApplication(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().status in ['awaiting_credentials', 'submitted', 'under_review'] &&
+            incoming().status in ['submitted', 'under_review', 'declined', 'completed'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'providerMessage', 'crediblyReference', 'orderId', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(applicationId) && isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow get: if isValidId(reviewId) && (existing().approved == true || (isVerified() && (existing().userId == request.auth.uid || isAdmin())));
+      allow list: if existing().approved == true || (isVerified() && (existing().userId == request.auth.uid || isAdmin()));
+      allow create: if isValidId(reviewId) && isVerified() && isValidReview(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        exists(/databases/$(database)/documents/products/$(incoming().productId)) &&
+        incoming().createdAt == request.time;
+      allow update, delete: if isValidId(reviewId) && isAdmin() && (request.method == 'delete' || isValidReview(incoming()));
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(notificationId) && isVerified() && isValidNotification(incoming()) &&
+        (incoming().userId == request.auth.uid || incoming().userId == 'ADMIN' || isAdmin()) &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(notificationId) && isVerified() && isValidNotification(incoming()) && (
+        isAdmin() ||
+        (
+          existing().userId == request.auth.uid &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+        )
+      );
+      allow delete: if isValidId(notificationId) && isAdmin();
+    }
+  }
+}
