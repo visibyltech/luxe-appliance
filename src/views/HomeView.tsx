@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight, CreditCard, ShieldCheck, Star, Truck, Wallet } from 'lucide-react';
 import { Brand, Category, Product, Review } from '../types';
 import { ProductCard } from '../components/ProductCard';
@@ -64,6 +64,103 @@ const HERO_SLIDES = [
     caption: 'Smart Home Appliances Delivered Nationwide',
   },
 ];
+
+const CategoryProductRail: React.FC<{
+  category: Category;
+  products: Product[];
+  wishlist: string[];
+  onSelectProduct: (product: Product) => void;
+  onQuickAdd: (product: Product) => void;
+  onBuyNow: (product: Product) => void;
+  onToggleWishlist: (productId: string) => void;
+  onStartSavings: (product: Product) => void;
+  onViewCategory: (categoryName: string) => void;
+}> = ({
+  category,
+  products,
+  wishlist,
+  onSelectProduct,
+  onQuickAdd,
+  onBuyNow,
+  onToggleWishlist,
+  onStartSavings,
+  onViewCategory,
+}) => {
+  const railRef = useRef<HTMLDivElement>(null);
+
+  if (products.length === 0) return null;
+
+  const scrollRail = (direction: -1 | 1) => {
+    if (!railRef.current) return;
+    railRef.current.scrollBy({
+      left: direction * Math.max(railRef.current.clientWidth * 0.8, 240),
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <section className="py-5 sm:py-7 border-b border-slate-100 last:border-b-0">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <h3 className="font-display text-lg sm:text-xl font-bold text-slate-950 truncate">
+            {category.name}
+          </h3>
+          <p className="text-[11px] sm:text-xs text-slate-500">
+            Explore products in {category.name}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => scrollRail(-1)}
+            aria-label={`Scroll ${category.name} products left`}
+            className="w-8 h-8 inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:border-blue-500 hover:text-blue-700"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollRail(1)}
+            aria-label={`Scroll ${category.name} products right`}
+            className="w-8 h-8 inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:border-blue-500 hover:text-blue-700"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewCategory(category.name)}
+            className="text-xs font-semibold text-blue-700 hover:underline whitespace-nowrap"
+          >
+            View all
+          </button>
+        </div>
+      </div>
+
+      <div
+        ref={railRef}
+        className="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label={`${category.name} products`}
+      >
+        {products.map((product) => (
+          <div
+            key={product.id}
+            className="w-[68vw] max-w-[230px] min-w-[155px] sm:w-[230px] sm:min-w-[230px] shrink-0 snap-start"
+          >
+            <ProductCard
+              product={product}
+              isWishlisted={wishlist.includes(product.id)}
+              onSelect={onSelectProduct}
+              onQuickAdd={onQuickAdd}
+              onBuyNow={onBuyNow}
+              onToggleWishlist={onToggleWishlist}
+              onStartSavings={onStartSavings}
+            />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
 
 export const HomeView: React.FC<HomeViewProps> = ({
   products,
@@ -361,6 +458,43 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
         </div>
       </section>
+
+      {/* Horizontal swipeable product shelves for every active category */}
+      {publishedProducts.length > 0 && (
+        <section className="bg-white border-t border-slate-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+            <div className="mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 mb-1">
+                Browse the departments
+              </p>
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-950">
+                Shop by Category
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Swipe sideways to discover more products in each department.
+              </p>
+            </div>
+            {categories
+              .filter((category) => category.active)
+              .map((category) => (
+                <CategoryProductRail
+                  key={category.id}
+                  category={category}
+                  products={publishedProducts.filter(
+                    (product) => product.category?.toLowerCase() === category.name.toLowerCase()
+                  )}
+                  wishlist={wishlist}
+                  onSelectProduct={onSelectProduct}
+                  onQuickAdd={onQuickAdd}
+                  onBuyNow={onBuyNow}
+                  onToggleWishlist={onToggleWishlist}
+                  onStartSavings={onStartSavings}
+                  onViewCategory={(categoryName) => onShopAll({ category: categoryName })}
+                />
+              ))}
+          </div>
+        </section>
+      )}
 
       {/* Clean Shop by Category Directory (Relevant Appliances & Electronics Only) */}
       <section className="border-t border-b border-slate-200 bg-slate-50/80 py-10 sm:py-14">
